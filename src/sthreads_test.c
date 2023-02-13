@@ -132,4 +132,6 @@ int main(){
   init(); // Initialization
 
   spawn(magic_numbers);
+  spawn(letters);
+  yield();
 }

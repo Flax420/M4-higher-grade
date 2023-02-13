@@ -32,8 +32,13 @@ typedef struct {
   thread_t *last;
 }thread_list_t;
 
+typedef struct {
+  thread_list_t *ready_list;
+  thread_list_t *terminated;
+} pool_t;
+
 int tid_counter = 1;
-thread_list_t *pool;
+pool_t *pool;
 ucontext_t main_context;
 
 /*******************************************************************************
@@ -90,9 +95,13 @@ thread_t *create_thread(void (*start)()){
 
 
 int init(){
-  pool = calloc(1, sizeof(pool));
-  pool->first = NULL;
-  pool->last = NULL;
+  pool = calloc(1, sizeof(pool_t));
+  pool->ready_list = calloc(1, sizeof(thread_list_t));
+  pool->terminated = calloc(1, sizeof(thread_list_t));
+  pool->ready_list->first = NULL;
+  pool->ready_list->last = NULL;
+  pool->terminated->first = NULL;
+  pool->terminated->last = NULL;
   getcontext(&main_context);
   return 1;
 }
@@ -100,20 +109,36 @@ int init(){
 
 tid_t spawn(void (*start)()){
   thread_t *thread = create_thread(start);
-  thread_list_push(pool, thread);
-  pool->first->state = running;
-  if(swapcontext(&main_context, &pool->first->ctx)) { //if fail
-    return -1;
-  }
+  thread_list_push(pool->ready_list, thread);
   return thread->tid;
 }
 
+
 void yield(){
+  thread_t *job = pool->ready_list->first;
+  if (job == NULL) { 
+    puts("There is no job to yield!");
+    return;
+  }
+  // if in the main job
+  if (job->state != running) {
+    job->state = running;
+    swapcontext(&main_context, &job->ctx);
+    return;
+  }
+
+  job->state = ready;
+  thread_list_push(pool->ready_list, thread_list_pop(pool->ready_list));
+  thread_t *new_job = pool->ready_list->first;
+  new_job->state = running;
+  swapcontext(&job->ctx, &new_job->ctx);
 }
 
-void  done(){
+
+void done(){
 }
+
 
 tid_t join(tid_t thread_t) {
-  return -1;
+  return thread_t;
 }
