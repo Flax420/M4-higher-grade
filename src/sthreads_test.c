@@ -130,4 +130,6 @@ int main(){
   puts("\n==== Test program for the Simple Threads API ====\n");
 
   init(); // Initialization
+
+  spawn(magic_numbers);
 }
