@@ -32,11 +32,13 @@
 typedef struct {
   thread_t *first;
   thread_t *last;
+  size_t    length;
 }thread_list_t;
 
 typedef struct {
   thread_list_t *ready_list;
   thread_list_t *terminated;
+  thread_list_t *waiting;
 } pool_t;
 
 int tid_counter = 1;
@@ -57,6 +59,7 @@ void thread_list_push(thread_list_t *list , thread_t *thread) {
   }
   list->last->next = thread;
   list->last = thread;
+  list->length++;
 }
 
 thread_t *thread_list_pop(thread_list_t *list) {
@@ -70,8 +73,37 @@ thread_t *thread_list_pop(thread_list_t *list) {
   }
   thread_t *first = list->first;
   list->first = first->next;
+  list->length--;
   return first;
 }
+
+thread_t *thread_list_remove(thread_list_t *list, int index) {
+  if (index == 0) {
+    return thread_list_pop(list);
+  }
+
+  if (index >= list->length) {
+    perror("Can't remove from index not in list!");
+  }
+
+  // Find thread to remove
+  int thread_pos = 0;
+  thread_t *prev_thread;
+  thread_t *thread = list->first;
+  while (thread_pos < index) {
+    prev_thread = thread;
+    thread = thread->next;
+    thread_pos++;
+  }
+
+  prev_thread->next = thread->next;
+  if (thread->next == NULL) {
+    list->last = prev_thread;
+  }
+
+  list->length--;
+  return thread;
+} 
 
 void create_context(ucontext_t *ctx) {
   ctx->uc_stack.ss_sp = calloc(STACK_SIZE, sizeof(char));
@@ -127,10 +159,8 @@ int init(){
   pool = calloc(1, sizeof(pool_t));
   pool->ready_list = calloc(1, sizeof(thread_list_t));
   pool->terminated = calloc(1, sizeof(thread_list_t));
-  pool->ready_list->first = NULL;
-  pool->ready_list->last = NULL;
-  pool->terminated->first = NULL;
-  pool->terminated->last = NULL;
+  pool->waiting = calloc(1, sizeof(thread_list_t));
+
   getcontext(&main_context);
   return 1;
 }
@@ -167,6 +197,34 @@ void yield(){
 
 
 void done(){
+  thread_t *job = pool->ready_list->first;
+
+  // Terminate job
+  job->state = terminated;
+  thread_list_push(pool->terminated, thread_list_pop(pool->ready_list));
+
+  // Check for waiting jobs
+  thread_t *waiting_thread;
+  int len = pool->waiting->length;
+  for (int i = 0; i < len; i++) {
+    waiting_thread = thread_list_pop(pool->waiting) ;
+
+    // If waiting for the current job
+    if (waiting_thread->waiting_for == job->tid) {
+      waiting_thread->state = ready;
+      waiting_thread->waiting_for = 0;
+      thread_list_push(pool->ready_list, waiting_thread);
+      continue;
+    }
+
+    thread_list_push(pool->waiting, waiting_thread);
+  }
+
+  // Run next job
+  thread_t *new_job = pool->ready_list->first;
+  new_job->state = running;
+  set_timer(signal_handler);
+  swapcontext(&job->ctx, &new_job->ctx);
 }
 
 
