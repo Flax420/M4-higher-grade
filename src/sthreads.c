@@ -9,12 +9,14 @@
 
 #include <signal.h>   /* SIGSTKSZ (default stack size), MINDIGSTKSZ (minimal
                          stack size) */
+#include <stdbool.h>  /* true, false */
 #include <stdio.h>    /* puts(), printf(), fprintf(), perror(), setvbuf(), _IOLBF,
                          stdout, stderr */
 #include <stdlib.h>   /* exit(), EXIT_SUCCESS, EXIT_FAILURE, malloc(), free() */
+#include <string.h>   /* memset() */
+#include <sys/time.h> /* ITIMER_REAL, struct itimerval, setitimer() */
 #include <ucontext.h> /* ucontext_t, getcontext(), makecontext(),
                          setcontext(), swapcontext() */
-#include <stdbool.h>  /* true, false */
 
 #include "sthreads.h"
 
@@ -89,6 +91,35 @@ thread_t *create_thread(void (*start)()){
 }
 
 
+void signal_handler(int s) {
+  switch (s) {
+    case SIGALRM:
+      puts("alarm");
+      break;
+  }
+}
+
+
+void set_timer(void (*handler) (int)) {
+  struct itimerval timer;
+  struct sigaction sa;
+
+  memset (&sa, 0, sizeof(sa));
+  sa.sa_handler = handler;
+  sigaction(SIGALRM, &sa, NULL);
+
+  timer.it_value.tv_sec = 0;
+  timer.it_value.tv_usec = 50*1000;
+  timer.it_interval.tv_sec = 0;
+  timer.it_interval.tv_usec = 0;
+
+  if (setitimer (ITIMER_REAL, &timer, NULL) < 0) {
+    perror("Error setting timer");
+    exit(EXIT_FAILURE);
+  }
+}
+
+
 /*******************************************************************************
                     Implementation of the Simple Threads API
 ********************************************************************************/
@@ -131,6 +162,7 @@ void yield(){
   thread_list_push(pool->ready_list, thread_list_pop(pool->ready_list));
   thread_t *new_job = pool->ready_list->first;
   new_job->state = running;
+  set_timer(signal_handler);
   swapcontext(&job->ctx, &new_job->ctx);
 }
 
