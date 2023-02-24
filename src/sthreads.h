@@ -29,7 +29,7 @@ struct thread {
   state_t state;
   ucontext_t ctx;
   thread_t *next; /* can use this to create a linked list of threads */
-  tid_t waiting_for; /* The id of the thread being waited for */
+  volatile tid_t waiting_for; /* The id of the thread being waited for */
 };
 
 

@@ -129,11 +129,12 @@ void slow_thing() {
 
 /* A job that just waits for another job */
 void waiting_job() {
-  tid_t letters_id = spawn(letters);
-  printf("Spawned letters with id %d\n", letters_id);
 
   tid_t slow_id = spawn(slow_thing);
   printf("Spawned a slow job with id %d\n", slow_id);
+
+  tid_t letters_id = spawn(letters);
+  printf("Spawned letters with id %d\n", letters_id);
 
   tid_t a = join(slow_id);
   printf("Successfully joined slow job (%d)!\n", a);
@@ -156,8 +157,8 @@ int main(){
 
   init(); // Initialization
 
-  spawn(magic_numbers);
-  // spawn(letters);
+  //spawn(magic_numbers);
+  //spawn(letters);
   spawn(fibonacci_slow);
   spawn(waiting_job);
 
