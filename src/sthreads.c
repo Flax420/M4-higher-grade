@@ -201,6 +201,8 @@ void yield(){
 void done(){
   thread_t *job = pool->ready_list->first;
 
+  puts("A job is done!");
+
   // Terminate job
   job->state = terminated;
   thread_list_push(pool->terminated, thread_list_pop(pool->ready_list));
@@ -208,14 +210,21 @@ void done(){
   // Check for waiting jobs
   thread_t *waiting_thread;
   int len = pool->waiting->length;
+  printf("There are %d waiting jobs\n", len);
   for (int i = 0; i < len; i++) {
     waiting_thread = thread_list_pop(pool->waiting);
 
+    printf("The waiting job is waiting for: %d\n", waiting_thread->waiting_for);
+    printf("The current job is: %d\n", job->tid);
+
     // If waiting for the current job
     if (waiting_thread->waiting_for == job->tid) {
+      puts("Moving a thread to ready!");
       waiting_thread->state = ready;
-      waiting_thread->waiting_for = 0;
+      // waiting_thread->waiting_for = 0;
+      printf("Ready queue has %lu waiting jobs\n", pool->ready_list->length);
       thread_list_push(pool->ready_list, waiting_thread);
+      printf("Ready queue has %lu waiting jobs\n", pool->ready_list->length);
       continue;
     }
 
@@ -232,10 +241,12 @@ void done(){
 
 tid_t join(tid_t thread) {
   thread_t *job = pool->ready_list->first;
+  printf("Joining thread %d\n", thread);
 
   // Check terminated jobs
   thread_t *terminated_thread;
   int len = pool->terminated->length;
+  printf("There are %d terminated jobs\n", len);
   for (int i = 0; i < len; i++) {
     terminated_thread = thread_list_pop(pool->terminated);
 
@@ -249,6 +260,7 @@ tid_t join(tid_t thread) {
   }
 
   // If the thread is not already terminated
+  puts("waiting for the thread");
   job->state = waiting;
   thread_t *t = thread_list_pop(pool->ready_list);
   thread_list_push(pool->waiting, t);

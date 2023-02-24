@@ -2,6 +2,7 @@
 #include <stdio.h>    // printf(), fprintf(), stdout, stderr, perror(), _IOLBF
 #include <stdbool.h>  // true, false
 #include <limits.h>   // INT_MAX
+#include <unistd.h>   // sleep()
 
 #include "sthreads.h" // init(), spawn(), yield(), done()
 
@@ -119,23 +120,29 @@ void magic_numbers() {
   }
 }
 
-/* A job that just waits for another job */
-void waiting_job() {
-  tid_t letters_id = spawn(letters);
-  printf("Spawned letters with id %d\n", letters_id);
-  tid_t v = join(letters_id);
-  printf("Successfully joined letters (%d)!\n", v);
+void slow_thing() {
+  long i = 0;
+  while (i < 1000000000) {i++;}
+  puts("The slow job is complete!");
   done();
 }
 
 /* A job that just waits for another job */
-// void sleeping_job() {
-//   tid_t letters_id = spawn(letters);
-//   // Add a sleep here
-//   join(letters_id);
-//   puts("Successfully waited for the letters job!");
-//   done();
-// }
+void waiting_job() {
+  tid_t letters_id = spawn(letters);
+  printf("Spawned letters with id %d\n", letters_id);
+
+  tid_t slow_id = spawn(slow_thing);
+  printf("Spawned a slow job with id %d\n", slow_id);
+
+  tid_t a = join(slow_id);
+  printf("Successfully joined slow job (%d)!\n", a);
+
+  tid_t b = join(letters_id);
+  printf("Successfully joined letters (%d)!\n", b);
+
+  done();
+}
 
 /*******************************************************************************
                                      main()
