@@ -159,7 +159,7 @@ int main(){
 
   //spawn(magic_numbers);
   //spawn(letters);
-  spawn(fibonacci_slow);
+  printf("FIBONACCI %d", spawn(fibonacci_slow));
   spawn(waiting_job);
 
   yield();

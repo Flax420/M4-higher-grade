@@ -70,7 +70,7 @@ thread_t *thread_list_pop(thread_list_t *list) {
     thread_t *first = list->first;
     list->first = NULL;
     list->last = NULL;
-    list->length++;
+    list->length--;
     return first;
   }
   thread_t *first = list->first;
@@ -194,7 +194,9 @@ void yield(){
   thread_t *new_job = pool->ready_list->first;
   new_job->state = running;
   set_timer(signal_handler);
-  swapcontext(&job->ctx, &new_job->ctx);
+  if(pool->ready_list->length > 1) {
+    swapcontext(&job->ctx, &new_job->ctx);
+  }
 }
 
 
