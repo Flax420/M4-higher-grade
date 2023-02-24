@@ -94,7 +94,7 @@ thread_t *create_thread(void (*start)()){
 void signal_handler(int s) {
   switch (s) {
     case SIGALRM:
-      puts("alarm");
+      yield();
       break;
   }
 }
@@ -108,10 +108,8 @@ void set_timer(void (*handler) (int)) {
   sa.sa_handler = handler;
   sigaction(SIGALRM, &sa, NULL);
 
-  timer.it_value.tv_sec = 0;
+  memset (&timer, 0, sizeof(timer));
   timer.it_value.tv_usec = 50*1000;
-  timer.it_interval.tv_sec = 0;
-  timer.it_interval.tv_usec = 0;
 
   if (setitimer (ITIMER_REAL, &timer, NULL) < 0) {
     perror("Error setting timer");
@@ -154,6 +152,7 @@ void yield(){
   // if in the main job
   if (job->state != running) {
     job->state = running;
+    set_timer(signal_handler);
     swapcontext(&main_context, &job->ctx);
     return;
   }

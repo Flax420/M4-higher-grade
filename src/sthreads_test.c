@@ -133,5 +133,6 @@ int main(){
 
   spawn(magic_numbers);
   spawn(letters);
+  spawn(fibonacci_slow);
   yield();
 }
