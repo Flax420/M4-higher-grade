@@ -59,7 +59,9 @@ void thread_list_push(thread_list_t *list , thread_t *thread) {
   }
   list->last->next = thread;
   list->last = thread;
+  printf("The list length before inc. is: %lu\n", list->length);
   list->length++;
+  printf("The list length after inc. is: %lu\n", list->length);
 }
 
 thread_t *thread_list_pop(thread_list_t *list) {
@@ -206,17 +208,20 @@ void done(){
   // Check for waiting jobs
   thread_t *waiting_thread;
   int len = pool->waiting->length;
+  printf("There are %d waiting jobs\n", len);
   for (int i = 0; i < len; i++) {
-    waiting_thread = thread_list_pop(pool->waiting) ;
+    waiting_thread = thread_list_pop(pool->waiting);
 
     // If waiting for the current job
     if (waiting_thread->waiting_for == job->tid) {
+      puts("There was a waiting job");
       waiting_thread->state = ready;
       waiting_thread->waiting_for = 0;
       thread_list_push(pool->ready_list, waiting_thread);
       continue;
     }
 
+    puts("There was a job waiting for another thread");
     thread_list_push(pool->waiting, waiting_thread);
   }
 
@@ -228,6 +233,42 @@ void done(){
 }
 
 
-tid_t join(tid_t thread_t) {
-  return thread_t;
+tid_t join(tid_t thread) {
+  thread_t *job = pool->ready_list->first;
+
+  // Check terminated jobs
+  thread_t *terminated_thread;
+  int len = pool->terminated->length;
+  for (int i = 0; i < len; i++) {
+    terminated_thread = thread_list_pop(pool->terminated);
+
+    // If found the thread to join
+    if (terminated_thread->tid == thread) {
+      thread_list_push(pool->terminated, terminated_thread);
+      puts("returned immediately");
+      return thread;
+    }
+
+    thread_list_push(pool->terminated, terminated_thread);
+  }
+
+  // If the thread is not already terminated
+  puts("Adding job to waiting list");
+  job->state = waiting;
+  printf("The length of the waiting list before adding a job is: %lu\n", pool->waiting->length);
+  thread_t *t = thread_list_pop(pool->ready_list);
+  printf("removed the thread");
+  thread_list_push(pool->waiting, t);
+  printf("The length of the waiting list after adding a job is: %lu\n", pool->waiting->length);
+  job->waiting_for = thread;
+
+  // Run next job
+  thread_t *new_job = pool->ready_list->first;
+  new_job->state = running;
+  set_timer(signal_handler);
+  puts("running another job");
+  swapcontext(&job->ctx, &new_job->ctx);
+
+  puts("returning after waiting");
+  return thread;
 }

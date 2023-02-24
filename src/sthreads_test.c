@@ -119,6 +119,24 @@ void magic_numbers() {
   }
 }
 
+/* A job that just waits for another job */
+void waiting_job() {
+  tid_t letters_id = spawn(letters);
+  printf("Spawned letters with id %d\n", letters_id);
+  tid_t v = join(letters_id);
+  printf("Successfully joined letters (%d)!\n", v);
+  done();
+}
+
+/* A job that just waits for another job */
+// void sleeping_job() {
+//   tid_t letters_id = spawn(letters);
+//   // Add a sleep here
+//   join(letters_id);
+//   puts("Successfully waited for the letters job!");
+//   done();
+// }
+
 /*******************************************************************************
                                      main()
 
@@ -132,7 +150,9 @@ int main(){
   init(); // Initialization
 
   spawn(magic_numbers);
-  spawn(letters);
+  // spawn(letters);
   spawn(fibonacci_slow);
+  spawn(waiting_job);
+
   yield();
 }

@@ -88,6 +88,6 @@ void  done();
    thread id thread calls done and join() should then return the thread id of the
    terminated thread.
 */
-tid_t join(tid_t thread_t);
+tid_t join(tid_t thread);
 
 #endif
